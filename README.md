@@ -10,7 +10,7 @@ Aquí se incluyen los archivos, códigos y recursos generados para facilitar la 
 - `/3D_Model/` → Archivos del diseño 3D de la carcasa del sensor (formatos STL y editables).  
 - `/Code/` → Código fuente del microcontrolador con las correcciones implementadas.  
 - `/Docs/` → Documentación técnica, diagramas y reportes del proceso.  
-- `/Tests/` → Registros de pruebas con muestras de suelo y observaciones de funcionamiento.  
+- `/Tests/` → Registros de pruebas y observaciones de funcionamiento.  
 
 ---
 
