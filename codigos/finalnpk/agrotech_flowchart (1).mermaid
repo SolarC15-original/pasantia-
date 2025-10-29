@@ -1,0 +1,41 @@
+flowchart TD
+    Start([INICIO]) --> Init[Inicializar Hardware:<br/>- OLED<br/>- GPS<br/>- Sensor Suelo<br/>- Tarjeta SD<br/>- Botones]
+    Init --> Splash[Mostrar Pantalla de Inicio<br/>AGROTECH]
+    Splash --> CheckSD{¿SD Inicializada<br/>Correctamente?}
+    CheckSD -->|No| ErrorSD[Mostrar Error SD<br/>DETENER]
+    CheckSD -->|Si| CreateFile[Crear Nuevo Archivo CSV<br/>con Encabezados]
+    CreateFile --> MainLoop[LOOP PRINCIPAL]
+    
+    MainLoop --> UpdateGPS[Actualizar GPS:<br/>Leer datos seriales<br/>Validar ubicación y hora]
+    UpdateGPS --> UpdateSoil[Actualizar Sensor Suelo:<br/>cada 2 segundos]
+    UpdateSoil --> CheckEvents{¿Evento de<br/>Botón?}
+    
+    CheckEvents -->|Botón REFRESH| ToggleScreen[Cambiar Estado Pantalla<br/>0=Sistema ↔ 1=Suelo]
+    ToggleScreen --> UpdateDisplay
+    
+    CheckEvents -->|Botón SAVE| SaveData[Guardar Datos en SD:<br/>Lat,Lon,Hora,Temp,Hum,<br/>CE,pH,N,P,K,Sal]
+    SaveData --> ShowMsg1[Mostrar: Dato Guardado]
+    ShowMsg1 --> UpdateDisplay
+    
+    CheckEvents -->|Botón NEW| NewFile[Crear Nuevo Archivo CSV<br/>Incrementar número]
+    NewFile --> ShowMsg2[Mostrar: Nuevo Archivo]
+    ShowMsg2 --> UpdateDisplay
+    
+    CheckEvents -->|Sin eventos| UpdateDisplay
+    
+    UpdateDisplay --> CheckState{¿Estado<br/>Pantalla?}
+    
+    CheckState -->|0: Sistema| DisplaySystem[Mostrar:<br/>- GPS Lat/Lon o Sin Señal<br/>- Hora actual<br/>- Nombre archivo]
+    CheckState -->|1: Suelo| DisplaySoil[Mostrar:<br/>- Temp y Humedad<br/>- CE y pH<br/>- N, P, K<br/>- Salinidad]
+    
+    DisplaySystem --> Delay[Esperar 100ms]
+    DisplaySoil --> Delay
+    Delay --> MainLoop
+    
+    style Start fill:#90EE90
+    style ErrorSD fill:#FF6B6B
+    style MainLoop fill:#87CEEB
+    style SaveData fill:#FFD700
+    style NewFile fill:#FFA500
+    style DisplaySystem fill:#DDA0DD
+    style DisplaySoil fill:#98FB98

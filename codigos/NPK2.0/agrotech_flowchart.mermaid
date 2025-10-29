@@ -1,0 +1,137 @@
+graph TD
+    A[INICIO] --> B[Inicializar Serial 115200]
+    B --> C[Inicializar Display OLED]
+    C --> D[Mostrar Splash AGROTECH]
+    D --> E[Inicializar GPS Serial 9600]
+    E --> F[Inicializar Sensor Suelo RS485]
+    F --> G[Configurar Botones con Pull-up]
+    G --> H[Configurar Interrupciones]
+    H --> I{¿SD Inicializa OK?}
+    
+    I -->|NO| J[Mostrar Error SD]
+    J --> K[DETENER Sistema]
+    
+    I -->|SI| L[Crear Archivo CSV DAT01]
+    L --> M[Crear Mutex para Datos]
+    M --> N{¿Mutex OK?}
+    
+    N -->|NO| O[Mostrar Error Mutex]
+    O --> K
+    
+    N -->|SI| P[Crear Task GPS en Core 0]
+    P --> Q[Iniciar Loop Principal]
+    
+    Q --> R[LOOP PRINCIPAL]
+    
+    subgraph CORE0 [CORE 0 - Task GPS]
+        T1[Task GPS Loop Infinito]
+        T1 --> T2[¿Hay Datos en Serial GPS?]
+        T2 -->|SI| T3[Decodificar NMEA]
+        T3 --> T4[Tomar Mutex]
+        T4 --> T5{¿Ubicación y Hora Válidas?}
+        T5 -->|SI| T6[Actualizar: lat, lng, hora ajustada UTC-5]
+        T5 -->|NO| T7[Marcar GPS inválido]
+        T6 --> T8[Liberar Mutex]
+        T7 --> T8
+        T8 --> T9[Delay 10ms]
+        T2 -->|NO| T9
+        T9 --> T1
+    end
+    
+    subgraph CORE1 [CORE 1 - Loop Principal]
+        R --> S[Actualizar Sensor Suelo]
+        
+        S --> S1{¿Han pasado 2s?}
+        S1 -->|NO| U
+        S1 -->|SI| S2[Tomar Mutex]
+        S2 --> S3[Enviar Comando Modbus]
+        S3 --> S4[Esperar Respuesta 1s]
+        S4 --> S5{¿21 bytes OK?}
+        S5 -->|SI| S6[Parsear: Temp, Hum, CE, pH, N, P, K, Sal]
+        S6 --> S7[Marcar sensor válido]
+        S5 -->|NO| S8[Marcar sensor inválido]
+        S7 --> S9[Liberar Mutex]
+        S8 --> S9
+        
+        S9 --> U[Manejar Eventos]
+        
+        U --> U1{¿Flag Refresh?}
+        U1 -->|SI| U2[Cambiar screenState 0↔1]
+        U2 --> U3[Limpiar Flag]
+        U1 -->|NO| U4{¿Flag Save?}
+        U3 --> U4
+        
+        U4 -->|SI| U5[Tomar Mutex]
+        U5 --> U6[Abrir Archivo CSV]
+        U6 --> U7[Escribir Línea con Datos]
+        U7 --> U8[Cerrar Archivo]
+        U8 --> U9[Liberar Mutex]
+        U9 --> U10[Mostrar: Dato Guardado]
+        U10 --> U11[Limpiar Flag]
+        U4 -->|NO| U12{¿Flag New File?}
+        U11 --> U12
+        
+        U12 -->|SI| U13[Crear Nuevo DATnn.CSV]
+        U13 --> U14[Escribir Encabezados]
+        U14 --> U15[Mostrar: Nuevo Archivo]
+        U15 --> U16[Limpiar Flag]
+        U12 -->|NO| V
+        U16 --> V
+        
+        V[Actualizar Pantalla]
+        V --> V1[Limpiar Display]
+        V1 --> V2[Tomar Mutex]
+        V2 --> V3{¿screenState?}
+        
+        V3 -->|0| V4[Pantalla SISTEMA]
+        V4 --> V5[Mostrar == SISTEMA ==]
+        V5 --> V6{¿GPS Válido?}
+        V6 -->|SI| V7[Mostrar Lat/Lng]
+        V6 -->|NO| V8[Mostrar: GPS Sin señal]
+        V7 --> V9[Mostrar Hora HH:MM:SS]
+        V8 --> V9
+        V9 --> V10[Mostrar Nombre Archivo]
+        V10 --> V20
+        
+        V3 -->|1| V11[Pantalla DATOS SUELO]
+        V11 --> V12[Mostrar == DATOS SUELO ==]
+        V12 --> V13{¿Sensor Válido?}
+        V13 -->|SI| V14[Mostrar Temp y Humedad]
+        V14 --> V15[Mostrar CE y pH]
+        V15 --> V16[Mostrar N, P, K]
+        V16 --> V17[Mostrar Salinidad]
+        V13 -->|NO| V18[Mostrar: Error en sensor!]
+        V17 --> V20
+        V18 --> V20
+        
+        V20[Liberar Mutex]
+        V20 --> V21[Enviar a Display]
+        V21 --> V22[Delay 100ms]
+        V22 --> R
+    end
+    
+    subgraph INTERRUPCIONES [Interrupciones - ISR]
+        INT1[handleRefresh ISR] --> INT2{¿Debounce OK?}
+        INT2 -->|SI| INT3[Set flags<link>0</link> = true]
+        INT2 -->|NO| INT9
+        INT3 --> INT9[Actualizar lastInterrupt]
+        
+        INT4[handleSave ISR] --> INT5{¿Debounce OK?}
+        INT5 -->|SI| INT6[Set flags<link>1</link> = true]
+        INT5 -->|NO| INT9
+        INT6 --> INT9
+        
+        INT7[handleNewFile ISR] --> INT8{¿Debounce OK?}
+        INT8 -->|SI| INT10[Set flags<link>2</link> = true]
+        INT8 -->|NO| INT9
+        INT10 --> INT9
+    end
+    
+    style A fill:#90EE90
+    style K fill:#FF6B6B
+    style CORE0 fill:#E6F3FF
+    style CORE1 fill:#FFF4E6
+    style INTERRUPCIONES fill:#FFE6F0
+    style P fill:#87CEEB
+    style T1 fill:#B0E0E6
+    style R fill:#FFE4B5
