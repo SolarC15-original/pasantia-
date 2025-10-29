@@ -1,0 +1,70 @@
+graph TD
+    A[INICIO] --> B[Inicializar Hardware]
+    B --> C[Display OLED]
+    B --> D[GPS Serial]
+    B --> E[Sensor RS485]
+    B --> F[Tarjeta SD]
+    B --> G[Botones con Interrupciones]
+    
+    C --> H[Mostrar Splash Screen]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+    
+    H --> I{¿SD OK?}
+    I -->|NO| J[Mostrar Error]
+    J --> K[DETENER]
+    I -->|SI| L[Crear Archivo CSV Inicial]
+    
+    L --> M[Crear Task GPS - Core 0]
+    L --> N[Crear Task Main - Core 1]
+    
+    M --> O[TASK GPS Loop Infinito]
+    N --> P[TASK MAIN Loop Infinito]
+    
+    O --> Q[Leer Buffer GPS]
+    Q --> R[Decodificar NMEA]
+    R --> S{¿Datos Válidos?}
+    S -->|SI| T[Actualizar: lat, lng, fecha, hora]
+    S -->|NO| U[Marcar GPS inválido]
+    T --> V[Delay 10ms]
+    U --> V
+    V --> O
+    
+    P --> W[Actualizar Sensor Suelo]
+    W --> X{¿Han pasado 2s?}
+    X -->|NO| Y[Manejar Eventos]
+    X -->|SI| Z[Leer Sensor Modbus]
+    Z --> AA{¿Respuesta OK?}
+    AA -->|SI| AB[Actualizar datos de suelo]
+    AA -->|NO| AC[Marcar sensor inválido]
+    AB --> Y
+    AC --> Y
+    
+    Y --> AD{¿Flag Refresh?}
+    AD -->|SI| AE[Cambiar Pantalla]
+    AD -->|NO| AF{¿Flag Save?}
+    AE --> AF
+    AF -->|SI| AG[Guardar en SD]
+    AG --> AH[Mostrar 'Dato Guardado']
+    AF -->|NO| AI{¿Flag New File?}
+    AH --> AI
+    AI -->|SI| AJ[Crear Nuevo CSV]
+    AJ --> AK[Mostrar 'Nuevo Archivo']
+    AI -->|NO| AL[Actualizar Display]
+    AK --> AL
+    
+    AL --> AM{¿Pantalla Actual?}
+    AM -->|0| AN[Mostrar: GPS + Fecha + Hora + Archivo]
+    AM -->|1| AO[Mostrar: Datos de Suelo]
+    AN --> AP[Delay 100ms]
+    AO --> AP
+    AP --> P
+    
+    style A fill:#90EE90
+    style K fill:#FF6B6B
+    style M fill:#87CEEB
+    style N fill:#87CEEB
+    style O fill:#FFE4B5
+    style P fill:#FFE4B5
